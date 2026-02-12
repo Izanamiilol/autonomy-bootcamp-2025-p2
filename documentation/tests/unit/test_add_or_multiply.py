@@ -12,7 +12,6 @@ import pytest
 
 import add_or_multiply
 
-
 # Test functions use test fixture signature names and access class privates
 # No enable
 # pylint: disable=protected-access,redefined-outer-name

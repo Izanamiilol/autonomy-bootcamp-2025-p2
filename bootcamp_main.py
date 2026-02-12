@@ -5,7 +5,6 @@ Main process to setup and manage all the other working processes
 """
 
 import multiprocessing as mp
-import queue
 import time
 
 from pymavlink import mavutil
@@ -22,18 +21,20 @@ from utilities.workers import queue_proxy_wrapper
 from utilities.workers import worker_controller
 from utilities.workers import worker_manager
 
-
-# MAVLink connection
 CONNECTION_STRING = "tcp:localhost:12345"
 
 # =================================================================================================
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
-# Set queue max sizes (<= 0 for infinity)
 
-# Set worker counts
+QUEUE_SIZE = 10
 
-# Any other constants
+NUM_HEARTBEAT_SENDERS = 1
+NUM_HEARTBEAT_RECEIVERS = 1
+NUM_TELEMETRY_WORKERS = 1
+NUM_COMMAND_WORKERS = 1
+
+TARGET_POSITION = command.Position(10, 20, 30)
 
 # =================================================================================================
 #                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
@@ -41,80 +42,121 @@ CONNECTION_STRING = "tcp:localhost:12345"
 
 
 def main() -> int:
-    """
-    Main function.
-    """
-    # Configuration settings
+    """Main entry point."""
+
     result, config = read_yaml.open_config(logger.CONFIG_FILE_PATH)
     if not result:
         print("ERROR: Failed to load configuration file")
         return -1
 
-    # Get Pylance to stop complaining
     assert config is not None
 
-    # Setup main logger
     result, main_logger, _ = logger_main_setup.setup_main_logger(config)
     if not result:
         print("ERROR: Failed to create main logger")
         return -1
 
-    # Get Pylance to stop complaining
     assert main_logger is not None
 
-    # Create a connection to the drone. Assume that this is safe to pass around to all processes
-    # In reality, this will not work, but to simplify the bootamp, preetend it is allowed
-    # To test, you will run each of your workers individually to see if they work
-    # (test "drones" are provided for you test your workers)
-    # NOTE: If you want to have type annotations for the connection, it is of type mavutil.mavfile
     connection = mavutil.mavlink_connection(CONNECTION_STRING)
-    connection.wait_heartbeat(timeout=30)  # Wait for the "drone" to connect
+    connection.wait_heartbeat(timeout=30)
 
-    # =============================================================================================
-    #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-    # =============================================================================================
-    # Create a worker controller
+    controller = worker_controller.WorkerController()
+    manager = mp.Manager()
 
-    # Create a multiprocess manager for synchronized queues
+    status_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, QUEUE_SIZE)
+    telemetry_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, QUEUE_SIZE)
+    command_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, QUEUE_SIZE)
 
-    # Create queues
+    workers = []
 
-    # Create worker properties for each worker type (what inputs it takes, how many workers)
-    # Heartbeat sender
+    # HEARTBEAT SENDER
+    workers.append(
+        worker_manager.WorkerManager(
+            heartbeat_sender_worker.heartbeat_sender_worker,
+            NUM_HEARTBEAT_SENDERS,
+            (connection, controller),
+            main_logger,
+        )
+    )
 
-    # Heartbeat receiver
+    # HEARTBEAT RECEIVER
+    workers.append(
+        worker_manager.WorkerManager(
+            heartbeat_receiver_worker.heartbeat_receiver_worker,
+            NUM_HEARTBEAT_RECEIVERS,
+            (connection, controller, status_queue),
+            main_logger,
+        )
+    )
 
-    # Telemetry
+    # TELEMETRY
+    workers.append(
+        worker_manager.WorkerManager(
+            telemetry_worker.telemetry_worker,
+            NUM_TELEMETRY_WORKERS,
+            (connection, controller, telemetry_queue),
+            main_logger,
+        )
+    )
 
-    # Command
+    # COMMAND
+    workers.append(
+        worker_manager.WorkerManager(
+            command_worker.command_worker,
+            NUM_COMMAND_WORKERS,
+            (
+                connection,
+                TARGET_POSITION,
+                controller,
+                telemetry_queue,
+                command_queue,
+            ),
+            main_logger,
+        )
+    )
 
-    # Create the workers (processes) and obtain their managers
-
-    # Start worker processes
+    for w in workers:
+        w.start()
 
     main_logger.info("Started")
 
-    # Main's work: read from all queues that output to main, and log any commands that we make
-    # Continue running for 100 seconds or until the drone disconnects
+    start_time = time.time()
+    run_time = 100
 
-    # Stop the processes
+    try:
+        while time.time() - start_time < run_time:
 
+            while not status_queue.queue.empty():
+                status = status_queue.queue.get()
+                main_logger.info(f"Heartbeat status: {status}")
+
+                if status == "Disconnected":
+                    main_logger.error("Drone disconnected — stopping system")
+                    raise KeyboardInterrupt
+
+            while not command_queue.queue.empty():
+                cmd = command_queue.queue.get()
+                main_logger.info(cmd)
+
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        main_logger.info("Shutdown requested")
+
+    controller.request_exit()
     main_logger.info("Requested exit")
 
-    # Fill and drain queues from END TO START
+    command_queue.fill_and_drain_queue()
+    telemetry_queue.fill_and_drain_queue()
+    status_queue.fill_and_drain_queue()
 
     main_logger.info("Queues cleared")
 
-    # Clean up worker processes
+    for w in workers:
+        w.join()
 
     main_logger.info("Stopped")
-
-    # We can reset controller in case we want to reuse it
-    # Alternatively, create a new WorkerController instance
-
-    # =============================================================================================
-    #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-    # =============================================================================================
 
     return 0
 

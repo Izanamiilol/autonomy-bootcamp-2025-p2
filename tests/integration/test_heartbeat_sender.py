@@ -2,6 +2,8 @@
 Test the heartbeat sender worker with a mocked drone.
 """
 
+# pylint: disable=broad-exception-caught
+
 import multiprocessing as mp
 import subprocess
 import threading
@@ -14,25 +16,23 @@ from modules.common.modules.read_yaml import read_yaml
 from modules.heartbeat import heartbeat_sender_worker
 from utilities.workers import worker_controller
 
-
 MOCK_DRONE_MODULE = "tests.integration.mock_drones.heartbeat_sender_drone"
 CONNECTION_STRING = "tcp:localhost:12345"
 
-# Please do not modify these, these are for the test cases (but do take note of them!)
+# Please do not modify these, these are for the test cases
 HEARTBEAT_PERIOD = 1
 NUM_TRIALS = 10
+
 
 # =================================================================================================
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
-# Add your own constants here
-
+WORKER_NAME = "heartbeat_sender"
 # =================================================================================================
 #                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
 # =================================================================================================
 
 
-# Same utility functions across all the integration tests
 # pylint: disable=duplicate-code
 def start_drone() -> None:
     """
@@ -44,13 +44,11 @@ def start_drone() -> None:
 # =================================================================================================
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
-def stop(
-    args,  # Add any necessary arguments
-) -> None:
+def stop(args) -> None:
     """
-    Stop the workers.
+    Stop the worker.
     """
-    pass  # Add logic to stop your worker
+    args.request_exit()
 
 
 # =================================================================================================
@@ -62,13 +60,16 @@ def main() -> int:
     """
     Start the heartbeat sender worker simulation.
     """
+
+    # Create worker controller ONCE
+    args = worker_controller.WorkerController()
+
     # Configuration settings
     result, config = read_yaml.open_config(logger.CONFIG_FILE_PATH)
     if not result:
         print("ERROR: Failed to load configuration file")
         return -1
 
-    # Get Pylance to stop complaining
     assert config is not None
 
     # Setup main logger
@@ -77,38 +78,25 @@ def main() -> int:
         print("ERROR: Failed to create main logger")
         return -1
 
-    # Get Pylance to stop complaining
     assert main_logger is not None
 
-    # Mocked GCS, connect to mocked drone which is listening at CONNECTION_STRING
-    # source_system = 255 (groundside)
-    # source_component = 0 (ground control station)
+    # Connect to mocked drone
     connection = mavutil.mavlink_connection(CONNECTION_STRING)
-    # Don't send another heartbeat since the worker will do so
     main_logger.info("Connected!")
-    # pylint: enable=duplicate-code
 
-    # =============================================================================================
-    #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-    # =============================================================================================
-    # Mock starting a worker, since cannot actually start a new process
-    # Create a worker controller for your worker
-
-    # Just set a timer to stop the worker after a while, since the worker infinite loops
+    # Stop worker after required time
     threading.Timer(HEARTBEAT_PERIOD * NUM_TRIALS, stop, (args,)).start()
 
+    # Run worker
     heartbeat_sender_worker.heartbeat_sender_worker(
-        # Place your own arguments here
+        connection,
+        args,
     )
-    # =============================================================================================
-    #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-    # =============================================================================================
 
     return 0
 
 
 if __name__ == "__main__":
-    # Start drone in another process
     drone_process = mp.Process(target=start_drone)
     drone_process.start()
 

@@ -2,6 +2,8 @@
 Test the command worker with a mocked drone.
 """
 
+# pylint: disable=broad-exception-caught
+
 import math
 import multiprocessing as mp
 import subprocess
@@ -18,7 +20,6 @@ from modules.common.modules.read_yaml import read_yaml
 from modules.telemetry import telemetry
 from utilities.workers import queue_proxy_wrapper
 from utilities.workers import worker_controller
-
 
 MOCK_DRONE_MODULE = "tests.integration.mock_drones.command_drone"
 CONNECTION_STRING = "tcp:localhost:12345"
@@ -53,32 +54,40 @@ def start_drone() -> None:
 # =================================================================================================
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
-def stop(
-    args,  # Add any necessary arguments
-) -> None:
+
+
+def stop(args) -> None:
     """
     Stop the workers.
     """
-    pass  # Add logic to stop your worker
+    args.request_exit()
 
 
 def read_queue(
-    args,  # Add any necessary arguments
+    command_queue: queue_proxy_wrapper.QueueProxyWrapper,
     main_logger: logger.Logger,
 ) -> None:
     """
     Read and print the output queue.
     """
-    pass  # Add logic to read from your worker's output queue and print it using the logger
+    while True:
+        try:
+            msg = command_queue.queue.get(timeout=0.1)
+            main_logger.info(msg)
+        except Exception:
+            break
 
 
 def put_queue(
-    args,  # Add any necessary arguments
+    telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
+    path,
 ) -> None:
     """
-    Place mocked inputs into the input queue periodically with period TELEMETRY_PERIOD.
+    Place mocked inputs into the input queue periodically.
     """
-    pass  # Add logic to place the mocked inputs into your worker's input queue periodically
+    for data in path:
+        telemetry_queue.queue.put(data)
+        time.sleep(TELEMETRY_PERIOD)
 
 
 # =================================================================================================
@@ -127,10 +136,14 @@ def main() -> int:
     # =============================================================================================
     # Mock starting a worker, since cannot actually start a new process
     # Create a worker controller for your worker
+    args = worker_controller.WorkerController()
 
     # Create a multiprocess manager for synchronized queues
+    manager = mp.Manager()
 
     # Create your queues
+    telemetry_queue = queue_proxy_wrapper.QueueProxyWrapper(manager)
+    command_queue = queue_proxy_wrapper.QueueProxyWrapper(manager)
 
     # Test cases, DO NOT EDIT!
     path = [
@@ -220,12 +233,17 @@ def main() -> int:
     threading.Timer(TELEMETRY_PERIOD * len(path), stop, (args,)).start()
 
     # Put items into input queue
-    threading.Thread(target=put_queue, args=(args,)).start()
+    threading.Thread(target=put_queue, args=(telemetry_queue, path), daemon=True).start()
 
     # Read the main queue (worker outputs)
-    threading.Thread(target=read_queue, args=(args, main_logger)).start()
+    threading.Thread(target=read_queue, args=(command_queue, main_logger), daemon=True).start()
 
     command_worker.command_worker(
+        connection,
+        TARGET,
+        args,
+        telemetry_queue,
+        command_queue,
         # Place your own arguments here
     )
     # =============================================================================================

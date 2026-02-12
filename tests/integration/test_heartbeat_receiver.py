@@ -2,6 +2,8 @@
 Test the heartbeat reciever worker with a mocked drone.
 """
 
+# pylint: disable=broad-exception-caught
+
 import multiprocessing as mp
 import subprocess
 import threading
@@ -14,7 +16,6 @@ from modules.common.modules.read_yaml import read_yaml
 from modules.heartbeat import heartbeat_receiver_worker
 from utilities.workers import queue_proxy_wrapper
 from utilities.workers import worker_controller
-
 
 MOCK_DRONE_MODULE = "tests.integration.mock_drones.heartbeat_receiver_drone"
 CONNECTION_STRING = "tcp:localhost:12345"
@@ -54,17 +55,22 @@ def stop(
     """
     Stop the workers.
     """
-    pass  # Add logic to stop your worker
+    args.request_exit()
 
 
 def read_queue(
-    args,  # Add any necessary arguments
+    status_queue: queue_proxy_wrapper.QueueProxyWrapper,  # Add any necessary arguments
     main_logger: logger.Logger,
 ) -> None:
     """
     Read and print the output queue.
     """
-    pass  # Add logic to read from your worker's output queue and print it using the logger
+    while True:
+        try:
+            status = status_queue.get()
+            main_logger.info(f"Heartbeat status: {status}")
+        except Exception:
+            break
 
 
 # =================================================================================================
@@ -113,10 +119,13 @@ def main() -> int:
     # =============================================================================================
     # Mock starting a worker, since cannot actually start a new process
     # Create a worker controller for your worker
+    args = worker_controller.WorkerController()
 
     # Create a multiprocess manager for synchronized queues
+    manager = mp.Manager()
 
     # Create your queues
+    status_queue = queue_proxy_wrapper.QueueProxyWrapper(manager)
 
     # Just set a timer to stop the worker after a while, since the worker infinite loops
     threading.Timer(
@@ -126,9 +135,16 @@ def main() -> int:
     ).start()
 
     # Read the main queue (worker outputs)
-    threading.Thread(target=read_queue, args=(args, main_logger)).start()
+    threading.Thread(
+        target=read_queue,
+        args=(status_queue, main_logger),
+        daemon=True,
+    ).start()
 
     heartbeat_receiver_worker.heartbeat_receiver_worker(
+        connection,
+        args,
+        status_queue,
         # Place your own arguments here
     )
     # =============================================================================================

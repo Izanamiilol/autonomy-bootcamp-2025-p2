@@ -2,34 +2,36 @@
 Telemetry gathering logic.
 """
 
-import time
+# pylint: disable=broad-exception-caught
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-arguments
+# pylint: disable=unused-argument
+# pylint: disable=too-many-positional-arguments
 
 from pymavlink import mavutil
 
 from ..common.modules.logger import logger
 
 
-class TelemetryData:  # pylint: disable=too-many-instance-attributes
-    """
-    Python struct to represent Telemtry Data. Contains the most recent attitude and position reading.
-    """
+class TelemetryData:
+    """Struct for telemetry data."""
 
     def __init__(
         self,
-        time_since_boot: int | None = None,  # ms
-        x: float | None = None,  # m
-        y: float | None = None,  # m
-        z: float | None = None,  # m
-        x_velocity: float | None = None,  # m/s
-        y_velocity: float | None = None,  # m/s
-        z_velocity: float | None = None,  # m/s
-        roll: float | None = None,  # rad
-        pitch: float | None = None,  # rad
-        yaw: float | None = None,  # rad
-        roll_speed: float | None = None,  # rad/s
-        pitch_speed: float | None = None,  # rad/s
-        yaw_speed: float | None = None,  # rad/s
-    ) -> None:
+        time_since_boot=None,
+        x=None,
+        y=None,
+        z=None,
+        x_velocity=None,
+        y_velocity=None,
+        z_velocity=None,
+        roll=None,
+        pitch=None,
+        yaw=None,
+        roll_speed=None,
+        pitch_speed=None,
+        yaw_speed=None,
+    ):
         self.time_since_boot = time_since_boot
         self.x = x
         self.y = y
@@ -44,31 +46,9 @@ class TelemetryData:  # pylint: disable=too-many-instance-attributes
         self.pitch_speed = pitch_speed
         self.yaw_speed = yaw_speed
 
-    def __str__(self) -> str:
-        return f"""{{
-            time_since_boot: {self.time_since_boot},
-            x: {self.x},
-            y: {self.y},
-            z: {self.z},
-            x_velocity: {self.x_velocity},
-            y_velocity: {self.y_velocity},
-            z_velocity: {self.z_velocity},
-            roll: {self.roll},
-            pitch: {self.pitch},
-            yaw: {self.yaw},
-            roll_speed: {self.roll_speed},
-            pitch_speed: {self.pitch_speed},
-            yaw_speed: {self.yaw_speed}
-        }}"""
 
-
-# =================================================================================================
-#                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-# =================================================================================================
 class Telemetry:
-    """
-    Telemetry class to read position and attitude (orientation).
-    """
+    """Reads MAVLink position and attitude messages."""
 
     __private_key = object()
 
@@ -76,39 +56,72 @@ class Telemetry:
     def create(
         cls,
         connection: mavutil.mavfile,
-        args,  # Put your own arguments here
+        args,
         local_logger: logger.Logger,
     ):
-        """
-        Falliable create (instantiation) method to create a Telemetry object.
-        """
-        pass  # Create a Telemetry object
+        """Create Telemetry safely."""
+        try:
+            return True, cls(cls.__private_key, connection, local_logger)
+        except Exception as exc:
+            local_logger.error(f"Failed to create Telemetry: {exc}", True)
+            return False, None
 
     def __init__(
         self,
         key: object,
         connection: mavutil.mavfile,
-        args,  # Put your own arguments here
         local_logger: logger.Logger,
     ) -> None:
-        assert key is Telemetry.__private_key, "Use create() method"
+        assert key is Telemetry.__private_key
 
-        # Do any intializiation here
+        self.connection = connection
+        self.logger = local_logger
 
-    def run(
-        self,
-        args,  # Put your own arguments here
-    ):
+        self.last_position = None
+        self.last_attitude = None
+
+    def run(self, args):
         """
-        Receive LOCAL_POSITION_NED and ATTITUDE messages from the drone,
-        combining them together to form a single TelemetryData object.
+        Combine LOCAL_POSITION_NED and ATTITUDE into TelemetryData.
         """
-        # Read MAVLink message LOCAL_POSITION_NED (32)
-        # Read MAVLink message ATTITUDE (30)
-        # Return the most recent of both, and use the most recent message's timestamp
-        pass
+        _ = args
 
+        try:
+            msg = self.connection.recv_match(
+                type=["LOCAL_POSITION_NED", "ATTITUDE"],
+                blocking=True,
+                timeout=1,
+            )
 
-# =================================================================================================
-#                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-# =================================================================================================
+            if msg is None:
+                return None
+
+            if msg.get_type() == "LOCAL_POSITION_NED":
+                self.last_position = msg
+            elif msg.get_type() == "ATTITUDE":
+                self.last_attitude = msg
+
+            if self.last_position and self.last_attitude:
+                return TelemetryData(
+                    time_since_boot=max(
+                        self.last_position.time_boot_ms,
+                        self.last_attitude.time_boot_ms,
+                    ),
+                    x=self.last_position.x,
+                    y=self.last_position.y,
+                    z=self.last_position.z,
+                    x_velocity=self.last_position.vx,
+                    y_velocity=self.last_position.vy,
+                    z_velocity=self.last_position.vz,
+                    roll=self.last_attitude.roll,
+                    pitch=self.last_attitude.pitch,
+                    yaw=self.last_attitude.yaw,
+                    roll_speed=self.last_attitude.rollspeed,
+                    pitch_speed=self.last_attitude.pitchspeed,
+                    yaw_speed=self.last_attitude.yawspeed,
+                )
+
+        except Exception as exc:
+            self.logger.error(f"Telemetry error: {exc}", True)
+
+        return None

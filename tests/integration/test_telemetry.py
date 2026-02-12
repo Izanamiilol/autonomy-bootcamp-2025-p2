@@ -2,6 +2,8 @@
 Test the telemetry worker with a mocked drone.
 """
 
+# pylint: disable=broad-exception-caught
+
 import multiprocessing as mp
 import subprocess
 import threading
@@ -15,86 +17,56 @@ from modules.telemetry import telemetry_worker
 from utilities.workers import queue_proxy_wrapper
 from utilities.workers import worker_controller
 
-
 MOCK_DRONE_MODULE = "tests.integration.mock_drones.telemetry_drone"
 CONNECTION_STRING = "tcp:localhost:12345"
 
-# Please do not modify these, these are for the test cases (but do take note of them!)
+# Please do not modify these
 TELEMETRY_PERIOD = 1
 NUM_TRIALS = 5
 NUM_FAILS = 3
 
-# =================================================================================================
-#                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-# =================================================================================================
-# Add your own constants here
 
-# =================================================================================================
-#                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-# =================================================================================================
-
-
-# Same utility functions across all the integration tests
-# pylint: disable=duplicate-code
+# =========================================================
+# Utility functions
+# =========================================================
 def start_drone() -> None:
-    """
-    Start the mocked drone.
-    """
     subprocess.run(["python", "-m", MOCK_DRONE_MODULE], shell=True, check=False)
 
 
-# =================================================================================================
-#                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-# =================================================================================================
-def stop(
-    args,  # Add any necessary arguments
-) -> None:
-    """
-    Stop the workers.
-    """
-    pass  # Add logic to stop your worker
+def stop(args) -> None:
+    args.request_exit()
 
 
 def read_queue(
-    args,  # Add any necessary arguments
+    telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
     main_logger: logger.Logger,
 ) -> None:
-    """
-    Read and print the output queue.
-    """
-    pass  # Add logic to read from your worker's output queue and print it using the logger
+    while True:
+        try:
+            data = telemetry_queue.queue.get(timeout=1)
+            main_logger.info(f"Telemetry: {data}")
+        except Exception:
+            break
 
 
-# =================================================================================================
-#                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-# =================================================================================================
-
-
+# =========================================================
+# Main
+# =========================================================
 def main() -> int:
-    """
-    Start the telemetry worker simulation.
-    """
-    # Configuration settings
     result, config = read_yaml.open_config(logger.CONFIG_FILE_PATH)
     if not result:
         print("ERROR: Failed to load configuration file")
         return -1
 
-    # Get Pylance to stop complaining
     assert config is not None
 
-    # Setup main logger
     result, main_logger, _ = logger_main_setup.setup_main_logger(config)
     if not result:
         print("ERROR: Failed to create main logger")
         return -1
 
-    # Get Pylance to stop complaining
     assert main_logger is not None
 
-    # Mocked GCS, connect to mocked drone which is listening at CONNECTION_STRING
-    # source_system = 255 (groundside)
-    # source_component = 0 (ground control station)
     connection = mavutil.mavlink_connection(CONNECTION_STRING)
     connection.mav.heartbeat_send(
         mavutil.mavlink.MAV_TYPE_GCS,
@@ -103,41 +75,49 @@ def main() -> int:
         0,
         0,
     )
+
     main_logger.info("Connected!")
-    # pylint: enable=duplicate-code
 
-    # =============================================================================================
-    #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-    # =============================================================================================
-    # Mock starting a worker, since cannot actually start a new process
-    # Create a worker controller for your worker
+    # =====================================================
+    # Worker setup
+    # =====================================================
 
-    # Create a multiprocess manager for synchronized queues
+    args = worker_controller.WorkerController()
 
-    # Create your queues
+    manager = mp.Manager()
 
-    # Just set a timer to stop the worker after a while, since the worker infinite loops
-    threading.Timer(TELEMETRY_PERIOD * NUM_TRIALS * 2 + NUM_FAILS, stop, (args,)).start()
+    telemetry_queue = queue_proxy_wrapper.QueueProxyWrapper(
+        manager,
+        maxsize=10,
+    )
 
-    # Read the main queue (worker outputs)
-    threading.Thread(target=read_queue, args=(args, main_logger)).start()
+    threading.Timer(
+        TELEMETRY_PERIOD * NUM_TRIALS * 2 + NUM_FAILS,
+        stop,
+        (args,),
+    ).start()
+
+    threading.Thread(
+        target=read_queue,
+        args=(telemetry_queue, main_logger),
+        daemon=True,
+    ).start()
 
     telemetry_worker.telemetry_worker(
-        # Put your own arguments here
+        connection,
+        args,
+        telemetry_queue,
     )
-    # =============================================================================================
-    #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-    # =============================================================================================
 
     return 0
 
 
 if __name__ == "__main__":
-    # Start drone in another process
     drone_process = mp.Process(target=start_drone)
     drone_process.start()
 
     result_main = main()
+
     if result_main < 0:
         print(f"Failed with return code {result_main}")
     else:

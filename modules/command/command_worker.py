@@ -2,34 +2,28 @@
 Command worker to make decisions based on Telemetry Data.
 """
 
+# pylint: disable=broad-exception-caught
+
 import os
 import pathlib
 
 from pymavlink import mavutil
 
 from utilities.workers import queue_proxy_wrapper
-from utilities.workers import worker_controller
 from . import command
 from ..common.modules.logger import logger
 
 
-# =================================================================================================
-#                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-# =================================================================================================
 def command_worker(
     connection: mavutil.mavfile,
     target: command.Position,
-    args,  # Place your own arguments here
-    # Add other necessary worker arguments here
+    args,
+    telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
+    command_queue: queue_proxy_wrapper.QueueProxyWrapper,
 ) -> None:
     """
     Worker process.
-
-    args... describe what the arguments are
     """
-    # =============================================================================================
-    #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-    # =============================================================================================
 
     # Instantiate logger
     worker_name = pathlib.Path(__file__).stem
@@ -39,19 +33,35 @@ def command_worker(
         print("ERROR: Worker failed to create logger")
         return
 
-    # Get Pylance to stop complaining
     assert local_logger is not None
-
     local_logger.info("Logger initialized", True)
 
-    # =============================================================================================
-    #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
-    # =============================================================================================
-    # Instantiate class object (command.Command)
+    # Instantiate Command logic
+    result, command_logic = command.Command.create(
+        connection,
+        target,
+        args,
+        local_logger,
+    )
 
-    # Main loop: do work.
+    if not result or command_logic is None:
+        local_logger.error("Failed to create Command", True)
+        return
 
+    # Main loop
+    while not args.is_exit_requested():
+        try:
+            args.check_pause()
 
-# =================================================================================================
-#                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-# =================================================================================================
+            try:
+                telemetry_data = telemetry_queue.queue.get(timeout=0.1)
+            except Exception:
+                continue
+
+            result_str = command_logic.run(telemetry_data)
+
+            if result_str is not None:
+                command_queue.queue.put(result_str)
+
+        except Exception as exc:
+            local_logger.error(f"Command worker error: {exc}", True)

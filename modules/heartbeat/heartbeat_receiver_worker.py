@@ -1,6 +1,8 @@
 """
-Heartbeat worker that sends heartbeats periodically.
+Heartbeat worker that receives heartbeats periodically.
 """
+
+# pylint: disable=broad-exception-caught
 
 import os
 import pathlib
@@ -8,7 +10,6 @@ import pathlib
 from pymavlink import mavutil
 
 from utilities.workers import queue_proxy_wrapper
-from utilities.workers import worker_controller
 from . import heartbeat_receiver
 from ..common.modules.logger import logger
 
@@ -18,13 +19,14 @@ from ..common.modules.logger import logger
 # =================================================================================================
 def heartbeat_receiver_worker(
     connection: mavutil.mavfile,
-    args,  # Place your own arguments here
-    # Add other necessary worker arguments here
+    args,
+    status_queue: queue_proxy_wrapper.QueueProxyWrapper,
 ) -> None:
     """
     Worker process.
 
-    args... describe what the arguments are
+    args: WorkerController instance controlling pause/exit
+    status_queue: Queue for sending connection status back to main
     """
     # =============================================================================================
     #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
@@ -38,19 +40,39 @@ def heartbeat_receiver_worker(
         print("ERROR: Worker failed to create logger")
         return
 
-    # Get Pylance to stop complaining
     assert local_logger is not None
-
     local_logger.info("Logger initialized", True)
 
     # =============================================================================================
     #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
     # =============================================================================================
-    # Instantiate class object (heartbeat_receiver.HeartbeatReceiver)
 
-    # Main loop: do work.
+    # Instantiate HeartbeatReceiver
+    result, receiver = heartbeat_receiver.HeartbeatReceiver.create(
+        connection,
+        args,
+        local_logger,
+    )
 
+    if not result or receiver is None:
+        local_logger.error("Failed to create HeartbeatReceiver", True)
+        return
 
-# =================================================================================================
-#                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-# =================================================================================================
+    # Main loop
+    while not args.is_exit_requested():
+        try:
+            args.check_pause()
+
+            status = receiver.run(args)
+
+            # Send status to main process
+            status_queue.queue.put(status)
+
+        except Exception as exc:
+            local_logger.error(f"Heartbeat receiver error: {exc}", True)
+
+    local_logger.info("Heartbeat receiver exiting", True)
+
+    # =============================================================================================
+    #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
+    # =============================================================================================

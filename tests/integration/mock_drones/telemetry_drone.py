@@ -11,7 +11,6 @@ from pymavlink import mavutil
 
 from modules.common.modules.logger import logger
 
-
 CONNECTION_STRING = "tcpin:localhost:12345"
 ATTITUDE_PERIOD = 1 / 3
 POSITION_PERIOD = 1 / 2

@@ -10,7 +10,6 @@ from pymavlink import mavutil
 
 from modules.common.modules.logger import logger
 
-
 CONNECTION_STRING = "tcpin:localhost:12345"
 HEARTBEAT_PERIOD = 1
 DISCONNECT_THRESHOLD = 5

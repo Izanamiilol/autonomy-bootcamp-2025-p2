@@ -2,13 +2,14 @@
 Heartbeat worker that sends heartbeats periodically.
 """
 
+# pylint: disable=broad-exception-caught
+
 import os
 import pathlib
 import time
 
 from pymavlink import mavutil
 
-from utilities.workers import worker_controller
 from . import heartbeat_sender
 from ..common.modules.logger import logger
 
@@ -18,13 +19,12 @@ from ..common.modules.logger import logger
 # =================================================================================================
 def heartbeat_sender_worker(
     connection: mavutil.mavfile,
-    args,  # Place your own arguments here
-    # Add other necessary worker arguments here
+    args,
 ) -> None:
     """
     Worker process.
 
-    args... describe what the arguments are
+    args: WorkerController instance controlling pause/exit
     """
     # =============================================================================================
     #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
@@ -38,19 +38,34 @@ def heartbeat_sender_worker(
         print("ERROR: Worker failed to create logger")
         return
 
-    # Get Pylance to stop complaining
     assert local_logger is not None
-
     local_logger.info("Logger initialized", True)
 
     # =============================================================================================
     #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
     # =============================================================================================
-    # Instantiate class object (heartbeat_sender.HeartbeatSender)
 
-    # Main loop: do work.
+    # Instantiate HeartbeatSender
+    result, sender = heartbeat_sender.HeartbeatSender.create(connection, args)
+    if not result or sender is None:
+        local_logger.error("Failed to create HeartbeatSender", True)
+        return
 
+    # Main loop
+    while not args.is_exit_requested():
+        try:
+            args.check_pause()
 
-# =================================================================================================
-#                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
-# =================================================================================================
+            sender.run(args)
+
+            # Send heartbeat once per second
+            time.sleep(1)
+
+        except Exception as exc:
+            local_logger.error(f"Heartbeat send failed: {exc}", True)
+
+    local_logger.info("Heartbeat sender exiting", True)
+
+    # =============================================================================================
+    #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
+    # =============================================================================================

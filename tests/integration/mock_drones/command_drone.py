@@ -10,7 +10,6 @@ from pymavlink import mavutil
 from modules.command import command
 from modules.common.modules.logger import logger
 
-
 CONNECTION_STRING = "tcpin:localhost:12345"
 TIMEOUT = 3.5
 NUM_TRIALS = 26

@@ -2,6 +2,8 @@
 Heartbeat receiving logic.
 """
 
+# pylint: disable=broad-exception-caught
+
 from pymavlink import mavutil
 
 from ..common.modules.logger import logger
@@ -12,43 +14,74 @@ from ..common.modules.logger import logger
 # =================================================================================================
 class HeartbeatReceiver:
     """
-    HeartbeatReceiver class to send a heartbeat
+    HeartbeatReceiver class to receive heartbeats.
     """
 
     __private_key = object()
+    __MAX_MISSED = 5
 
     @classmethod
     def create(
         cls,
         connection: mavutil.mavfile,
-        args,  # Put your own arguments here
+        _args,
         local_logger: logger.Logger,
     ):
         """
         Falliable create (instantiation) method to create a HeartbeatReceiver object.
         """
-        pass  # Create a HeartbeatReceiver object
+        try:
+            receiver = cls(cls.__private_key, connection, local_logger)
+            return True, receiver
+        except Exception as exc:
+            local_logger.error(f"Failed to create HeartbeatReceiver: {exc}", True)
+            return False, None
 
     def __init__(
         self,
         key: object,
         connection: mavutil.mavfile,
-        args,  # Put your own arguments here
+        local_logger: logger.Logger,
     ) -> None:
         assert key is HeartbeatReceiver.__private_key, "Use create() method"
 
-        # Do any intializiation here
+        self.connection = connection
+        self.logger = local_logger
+        self.missed_heartbeats = 0
+        self.connected = False
 
-    def run(
-        self,
-        args,  # Put your own arguments here
-    ):
+    def run(self, _args):
         """
-        Attempt to recieve a heartbeat message.
+        Attempt to receive a heartbeat message.
         If disconnected for over a threshold number of periods,
         the connection is considered disconnected.
         """
-        pass
+
+        msg = self.connection.recv_match(
+            type="HEARTBEAT",
+            blocking=True,
+            timeout=1,
+        )
+
+        if msg is not None:
+            self.missed_heartbeats = 0
+
+            if not self.connected:
+                self.connected = True
+                self.logger.info("Connected", True)
+
+            return "Connected"
+
+        # Missed heartbeat
+        self.missed_heartbeats += 1
+
+        if self.missed_heartbeats >= self.__MAX_MISSED:
+            if self.connected:
+                self.connected = False
+                self.logger.error("Disconnected", True)
+            return "Disconnected"
+
+        return "Connected"
 
 
 # =================================================================================================
