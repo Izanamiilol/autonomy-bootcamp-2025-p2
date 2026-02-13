@@ -1,0 +1,3 @@
+19:47:16: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\telemetry\telemetry_worker.py | telemetry_worker | 40] Logger initialized
+19:47:40: [ERROR] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\telemetry\telemetry_worker.py | telemetry_worker | 64] Telemetry worker error: 
+19:47:40: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\telemetry\telemetry_worker.py | telemetry_worker | 66] Telemetry worker exiting

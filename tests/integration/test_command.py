@@ -56,7 +56,7 @@ def start_drone() -> None:
 # =================================================================================================
 
 
-def stop(args) -> None:
+def stop(args:worker_controller.WorkerController) -> None:
     """
     Stop the workers.
     """
@@ -80,7 +80,7 @@ def read_queue(
 
 def put_queue(
     telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
-    path,
+    path:list[telemetry.TelemetryData],
 ) -> None:
     """
     Place mocked inputs into the input queue periodically.

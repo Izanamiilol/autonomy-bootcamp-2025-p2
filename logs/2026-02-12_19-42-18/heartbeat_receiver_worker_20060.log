@@ -1,0 +1,5 @@
+19:42:19: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\heartbeat\heartbeat_receiver_worker.py | heartbeat_receiver_worker | 45] Logger initialized
+19:42:19: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\heartbeat\heartbeat_receiver.py | run | 71] Connected
+19:42:28: [ERROR] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\heartbeat\heartbeat_receiver.py | run | 81] Disconnected
+19:42:32: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\heartbeat\heartbeat_receiver.py | run | 71] Connected
+19:42:40: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\heartbeat\heartbeat_receiver_worker.py | heartbeat_receiver_worker | 75] Heartbeat receiver exiting

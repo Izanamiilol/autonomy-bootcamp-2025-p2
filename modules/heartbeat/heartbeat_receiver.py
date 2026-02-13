@@ -5,7 +5,6 @@ Heartbeat receiving logic.
 # pylint: disable=broad-exception-caught
 
 from pymavlink import mavutil
-from utilities.workers import worker_controller
 
 from ..common.modules.logger import logger
 
@@ -25,9 +24,9 @@ class HeartbeatReceiver:
     def create(
         cls,
         connection: mavutil.mavfile,
-        _args: worker_controller.WorkerController,
+        _args: object,
         local_logger: logger.Logger,
-    ) -> tuple[bool, "HeartbeatReceiver | None"]:
+    ) -> tuple[bool, "HeartbeatReceiver"]:
         """
         Falliable create (instantiation) method to create a HeartbeatReceiver object.
         """
@@ -51,7 +50,7 @@ class HeartbeatReceiver:
         self.missed_heartbeats = 0
         self.connected = False
 
-    def run(self, _args: worker_controller.WorkerController) -> str:
+    def run(self, _args: object) -> str | None:
         """
         Attempt to receive a heartbeat message.
         If disconnected for over a threshold number of periods,
