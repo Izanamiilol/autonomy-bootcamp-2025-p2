@@ -27,7 +27,7 @@ class HeartbeatReceiver:
         connection: mavutil.mavfile,
         _args: worker_controller.WorkerController,
         local_logger: logger.Logger,
-    )-> tuple[bool, "HeartbeatReceiver | None"]:
+    ) -> tuple[bool, "HeartbeatReceiver | None"]:
         """
         Falliable create (instantiation) method to create a HeartbeatReceiver object.
         """
@@ -51,7 +51,7 @@ class HeartbeatReceiver:
         self.missed_heartbeats = 0
         self.connected = False
 
-    def run(self, _args: worker_controller.WorkerController)->str:
+    def run(self, _args: worker_controller.WorkerController) -> str:
         """
         Attempt to receive a heartbeat message.
         If disconnected for over a threshold number of periods,
