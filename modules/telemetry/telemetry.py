@@ -18,7 +18,7 @@ class TelemetryData:
 
     def __init__(
         self,
-        time_since_boot:int|None=None,
+        time_since_boot: int | None = None,
         x: float | None = None,
         y: float | None = None,
         z: float | None = None,
@@ -56,9 +56,9 @@ class Telemetry:
     def create(
         cls,
         connection: mavutil.mavfile,
-        args:object,
+        args: object,
         local_logger: logger.Logger,
-    ) -> tuple[bool,"Telemetry"]:
+    ) -> tuple[bool, "Telemetry"]:
         """Create Telemetry safely."""
         try:
             return True, cls(cls.__private_key, connection, local_logger)
@@ -80,7 +80,7 @@ class Telemetry:
         self.last_position = None
         self.last_attitude = None
 
-    def run(self, args:object) -> TelemetryData|None:
+    def run(self, args: object) -> TelemetryData | None:
         """
         Combine LOCAL_POSITION_NED and ATTITUDE into TelemetryData.
         """

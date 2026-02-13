@@ -41,7 +41,7 @@ class HeartbeatSender:
 
         self.connection = connection
 
-    def run(self, _args:object) -> None:
+    def run(self, _args: object) -> None:
         """
         Attempt to send a heartbeat message.
         """

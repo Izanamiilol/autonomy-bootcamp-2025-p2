@@ -44,7 +44,7 @@ def start_drone() -> None:
 # =================================================================================================
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
-def stop(args:worker_controller.WorkerController) -> None:
+def stop(args: worker_controller.WorkerController) -> None:
     """
     Stop the worker.
     """

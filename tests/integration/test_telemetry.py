@@ -33,7 +33,7 @@ def start_drone() -> None:
     subprocess.run(["python", "-m", MOCK_DRONE_MODULE], shell=True, check=False)
 
 
-def stop(args:worker_controller.WorkerController) -> None:
+def stop(args: worker_controller.WorkerController) -> None:
     args.request_exit()
 
 
