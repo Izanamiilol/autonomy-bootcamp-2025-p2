@@ -1,0 +1,13 @@
+18:44:27: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | main | 41] Logger initialized
+18:44:27: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:28: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:29: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:30: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:31: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:40: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:41: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:42: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:43: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:44: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:46: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | send_heartbeats | 58] Drone: Sent a heartbeat
+18:44:47: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\mock_drones\heartbeat_receiver_drone.py | main | 78] Passesd!

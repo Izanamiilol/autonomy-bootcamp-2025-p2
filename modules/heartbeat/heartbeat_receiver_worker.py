@@ -10,6 +10,7 @@ import pathlib
 from pymavlink import mavutil
 
 from utilities.workers import queue_proxy_wrapper
+from utilities.workers.worker_controller import WorkerController
 from . import heartbeat_receiver
 from ..common.modules.logger import logger
 
@@ -19,7 +20,7 @@ from ..common.modules.logger import logger
 # =================================================================================================
 def heartbeat_receiver_worker(
     connection: mavutil.mavfile,
-    args,
+    args: WorkerController,
     status_queue: queue_proxy_wrapper.QueueProxyWrapper,
 ) -> None:
     """

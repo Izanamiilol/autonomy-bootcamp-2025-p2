@@ -10,6 +10,7 @@ import pathlib
 from pymavlink import mavutil
 
 from utilities.workers import queue_proxy_wrapper
+from utilities.workers.worker_controller import WorkerController
 from . import telemetry
 from ..common.modules.logger import logger
 
@@ -19,7 +20,7 @@ from ..common.modules.logger import logger
 # =================================================================================================
 def telemetry_worker(
     connection: mavutil.mavfile,
-    args,
+    args: WorkerController,
     telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
 ) -> None:
     """

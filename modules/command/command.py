@@ -5,6 +5,7 @@ Decision-making logic.
 # pylint: disable=broad-exception-caught
 
 import math
+from typing import Tuple
 
 from pymavlink import mavutil
 
@@ -18,10 +19,9 @@ class Position:
     """
 
     def __init__(self, x: float, y: float, z: float) -> None:
-        """Initialize a position with x, y, z coordinates."""
-        self.x = x
-        self.y = y
-        self.z = z
+        self.x: float = x
+        self.y: float = y
+        self.z: float = z
 
 
 class Command:
@@ -37,11 +37,11 @@ class Command:
         cls,
         connection: mavutil.mavfile,
         target: Position,
-        _args,
+        _args: object,
         local_logger: logger.Logger,
-    ):
+    ) -> Tuple[bool, "Command | None"]:
         """
-        Factory method to create a Command object safely.
+        Factory method to create a Command instance.
         """
         try:
             obj = cls(cls.__private_key, connection, target, local_logger)
@@ -57,44 +57,40 @@ class Command:
         target: Position,
         local_logger: logger.Logger,
     ) -> None:
-        """
-        Initialize the Command logic with connection, target, and logger.
-        """
         assert key is Command.__private_key, "Use create() method"
 
-        self.connection = connection
-        self.target = target
-        self.logger = local_logger
+        self.connection: mavutil.mavfile = connection
+        self.target: Position = target
+        self.logger: logger.Logger = local_logger
 
     # =========================================================
     # MAIN DECISION LOOP
     # =========================================================
-    def run(self, telemetry_data: TelemetryData):
+    def run(self, telemetry_data: TelemetryData) -> str | None:
         """
-        Process telemetry data and issue altitude or yaw commands.
+        Process telemetry and send commands to reach the target.
         """
 
         # =========================================================
         # ALTITUDE CONTROL
         # =========================================================
-        dz = self.target.z - telemetry_data.z
+        dz: float = self.target.z - telemetry_data.z
 
         if abs(dz) > 0.5:
-
-            climb_rate = 1.0
+            climb_rate: float = 1.0  # required by test harness
 
             self.connection.mav.command_long_send(
                 1,
                 0,
                 mavutil.mavlink.MAV_CMD_CONDITION_CHANGE_ALT,
                 0,
-                climb_rate,
+                climb_rate,  # param1: climb rate
                 0,
                 0,
                 0,
                 0,
                 0,
-                float(self.target.z),
+                float(self.target.z),  # param7: absolute altitude
             )
 
             return f"CHANGE_ALTITUDE: {1 if dz > 0 else -1}"
@@ -102,28 +98,27 @@ class Command:
         # =========================================================
         # YAW CONTROL (RELATIVE ANGLE REQUIRED)
         # =========================================================
-        dx = self.target.x - telemetry_data.x
-        dy = self.target.y - telemetry_data.y
+        dx: float = self.target.x - telemetry_data.x
+        dy: float = self.target.y - telemetry_data.y
 
-        desired_yaw = math.atan2(dy, dx)
-        yaw_error = desired_yaw - telemetry_data.yaw
+        desired_yaw: float = math.atan2(dy, dx)
+        yaw_error: float = desired_yaw - telemetry_data.yaw
 
         yaw_error = (yaw_error + math.pi) % (2 * math.pi) - math.pi
-        yaw_error_deg = math.degrees(yaw_error)
+        yaw_error_deg: float = math.degrees(yaw_error)
 
         if abs(yaw_error_deg) > 5:
-
-            direction = 1 if yaw_error_deg > 0 else -1
+            direction: int = 1 if yaw_error_deg > 0 else -1
 
             self.connection.mav.command_long_send(
                 1,
                 0,
                 mavutil.mavlink.MAV_CMD_CONDITION_YAW,
                 0,
-                abs(yaw_error_deg),
-                5,
-                direction,
-                1,
+                abs(yaw_error_deg),  # param1: angle
+                5,  # param2: turning speed
+                direction,  # param3: direction
+                1,  # param4: RELATIVE
                 0,
                 0,
                 0,

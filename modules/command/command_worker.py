@@ -6,6 +6,7 @@ Command worker to make decisions based on Telemetry Data.
 
 import os
 import pathlib
+from typing import Any
 
 from pymavlink import mavutil
 
@@ -17,12 +18,12 @@ from ..common.modules.logger import logger
 def command_worker(
     connection: mavutil.mavfile,
     target: command.Position,
-    args,
+    args: Any,
     telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
     command_queue: queue_proxy_wrapper.QueueProxyWrapper,
 ) -> None:
     """
-    Worker process.
+    Worker process that consumes telemetry data and produces commands.
     """
 
     # Instantiate logger

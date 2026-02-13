@@ -1,3 +1,0 @@
-18:11:14: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\modules\common\modules\logger\logger_main_setup.py | setup_main_logger | 62] main logger initialized
-18:11:15: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\test_command.py | main | 131] Connected!
-18:11:15: [INFO] [C:\Users\Jeyas\Downloads\WARGBootcamp\autonomy-bootcamp-2025-p2\tests\integration\test_command.py | read_queue | 76] CHANGE_ALTITUDE: 1

@@ -10,6 +10,7 @@ import time
 
 from pymavlink import mavutil
 
+from utilities.workers.worker_controller import WorkerController
 from . import heartbeat_sender
 from ..common.modules.logger import logger
 
@@ -19,7 +20,7 @@ from ..common.modules.logger import logger
 # =================================================================================================
 def heartbeat_sender_worker(
     connection: mavutil.mavfile,
-    args,
+    args: WorkerController,
 ) -> None:
     """
     Worker process.
